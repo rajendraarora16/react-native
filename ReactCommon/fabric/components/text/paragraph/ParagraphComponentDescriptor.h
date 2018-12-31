@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include <fabric/components/text/ParagraphShadowNode.h>
-#include <fabric/core/ConcreteComponentDescriptor.h>
-#include <fabric/textlayoutmanager/TextLayoutManager.h>
-#include <fabric/uimanager/ContextContainer.h>
+#include <react/components/text/ParagraphShadowNode.h>
+#include <react/core/ConcreteComponentDescriptor.h>
+#include <react/textlayoutmanager/TextLayoutManager.h>
+#include <react/uimanager/ContextContainer.h>
 
 namespace facebook {
 namespace react {
@@ -18,13 +18,13 @@ namespace react {
 /*
  * Descriptor for <Paragraph> component.
  */
-class ParagraphComponentDescriptor final:
-  public ConcreteComponentDescriptor<ParagraphShadowNode> {
-
-public:
-
-  ParagraphComponentDescriptor(SharedEventDispatcher eventDispatcher, const SharedContextContainer &contextContainer):
-    ConcreteComponentDescriptor<ParagraphShadowNode>(eventDispatcher) {
+class ParagraphComponentDescriptor final
+    : public ConcreteComponentDescriptor<ParagraphShadowNode> {
+ public:
+  ParagraphComponentDescriptor(
+      SharedEventDispatcher eventDispatcher,
+      const SharedContextContainer &contextContainer)
+      : ConcreteComponentDescriptor<ParagraphShadowNode>(eventDispatcher) {
     // Every single `ParagraphShadowNode` will have a reference to
     // a shared `TextLayoutManager`.
     textLayoutManager_ = std::make_shared<TextLayoutManager>(contextContainer);
@@ -34,7 +34,8 @@ public:
     ConcreteComponentDescriptor::adopt(shadowNode);
 
     assert(std::dynamic_pointer_cast<ParagraphShadowNode>(shadowNode));
-    auto paragraphShadowNode = std::static_pointer_cast<ParagraphShadowNode>(shadowNode);
+    auto paragraphShadowNode =
+        std::static_pointer_cast<ParagraphShadowNode>(shadowNode);
 
     // `ParagraphShadowNode` uses `TextLayoutManager` to measure text content
     // and communicate text rendering metrics to mounting layer.
@@ -45,8 +46,7 @@ public:
     paragraphShadowNode->enableMeasurement();
   }
 
-private:
-
+ private:
   SharedTextLayoutManager textLayoutManager_;
 };
 

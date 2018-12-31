@@ -7,8 +7,8 @@
 
 #include "ImageLocalData.h"
 
-#include <fabric/components/image/conversions.h>
-#include <fabric/debug/debugStringConvertibleUtils.h>
+#include <react/components/image/conversions.h>
+#include <react/debug/debugStringConvertibleUtils.h>
 
 namespace facebook {
 namespace react {
@@ -29,9 +29,7 @@ std::string ImageLocalData::getDebugName() const {
 }
 
 SharedDebugStringConvertibleList ImageLocalData::getDebugProps() const {
-  return {
-    debugStringConvertibleItem("imageSource", imageSource_)
-  };
+  return {debugStringConvertibleItem("imageSource", imageSource_)};
 }
 #endif
 

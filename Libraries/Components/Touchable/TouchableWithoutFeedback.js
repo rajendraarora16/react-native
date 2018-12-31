@@ -13,7 +13,6 @@
 const DeprecatedEdgeInsetsPropType = require('DeprecatedEdgeInsetsPropType');
 const React = require('React');
 const PropTypes = require('prop-types');
-const TimerMixin = require('react-timer-mixin');
 const Touchable = require('Touchable');
 const View = require('View');
 
@@ -21,37 +20,41 @@ const createReactClass = require('create-react-class');
 const ensurePositiveDelayProps = require('ensurePositiveDelayProps');
 
 const {
-  AccessibilityComponentTypes,
-  AccessibilityRoles,
-  AccessibilityStates,
-  AccessibilityTraits,
-} = require('ViewAccessibility');
+  DeprecatedAccessibilityComponentTypes,
+  DeprecatedAccessibilityRoles,
+  DeprecatedAccessibilityStates,
+  DeprecatedAccessibilityTraits,
+} = require('DeprecatedViewAccessibility');
 
-import type {PressEvent} from 'CoreEventTypes';
+import type {SyntheticEvent, LayoutEvent, PressEvent} from 'CoreEventTypes';
 import type {EdgeInsetsProp} from 'EdgeInsetsPropType';
 import type {
   AccessibilityComponentType,
   AccessibilityRole,
-  AccessibilityStates as AccessibilityStatesFlow,
-  AccessibilityTraits as AccessibilityTraitsFlow,
+  AccessibilityStates,
+  AccessibilityTraits,
 } from 'ViewAccessibility';
+
+type TargetEvent = SyntheticEvent<
+  $ReadOnly<{|
+    target: number,
+  |}>,
+>;
+
+type BlurEvent = TargetEvent;
+type FocusEvent = TargetEvent;
 
 const PRESS_RETENTION_OFFSET = {top: 20, left: 20, right: 20, bottom: 30};
 
 export type Props = $ReadOnly<{|
   accessible?: ?boolean,
   accessibilityComponentType?: ?AccessibilityComponentType,
-  accessibilityLabel?:
-    | null
-    | React$PropType$Primitive<any>
-    | string
-    | Array<any>
-    | any,
+  accessibilityLabel?: ?Stringish,
   accessibilityHint?: ?Stringish,
   accessibilityIgnoresInvertColors?: ?boolean,
   accessibilityRole?: ?AccessibilityRole,
-  accessibilityStates?: ?AccessibilityStatesFlow,
-  accessibilityTraits?: ?AccessibilityTraitsFlow,
+  accessibilityStates?: ?AccessibilityStates,
+  accessibilityTraits?: ?AccessibilityTraits,
   children?: ?React.Node,
   delayLongPress?: ?number,
   delayPressIn?: ?number,
@@ -59,13 +62,13 @@ export type Props = $ReadOnly<{|
   disabled?: ?boolean,
   hitSlop?: ?EdgeInsetsProp,
   nativeID?: ?string,
-  onBlur?: ?Function,
-  onFocus?: ?Function,
-  onLayout?: ?Function,
-  onLongPress?: ?Function,
-  onPress?: ?Function,
-  onPressIn?: ?Function,
-  onPressOut?: ?Function,
+  onBlur?: ?(e: BlurEvent) => void,
+  onFocus?: ?(e: FocusEvent) => void,
+  onLayout?: ?(event: LayoutEvent) => mixed,
+  onLongPress?: ?(event: PressEvent) => mixed,
+  onPress?: ?(event: PressEvent) => mixed,
+  onPressIn?: ?(event: PressEvent) => mixed,
+  onPressOut?: ?(event: PressEvent) => mixed,
   pressRetentionOffset?: ?EdgeInsetsProp,
   rejectResponderTermination?: ?boolean,
   testID?: ?string,
@@ -80,20 +83,22 @@ export type Props = $ReadOnly<{|
  */
 const TouchableWithoutFeedback = ((createReactClass({
   displayName: 'TouchableWithoutFeedback',
-  mixins: [TimerMixin, Touchable.Mixin],
+  mixins: [Touchable.Mixin],
 
   propTypes: {
     accessible: PropTypes.bool,
     accessibilityLabel: PropTypes.node,
     accessibilityHint: PropTypes.string,
-    accessibilityComponentType: PropTypes.oneOf(AccessibilityComponentTypes),
-    accessibilityRole: PropTypes.oneOf(AccessibilityRoles),
+    accessibilityComponentType: PropTypes.oneOf(
+      DeprecatedAccessibilityComponentTypes,
+    ),
+    accessibilityRole: PropTypes.oneOf(DeprecatedAccessibilityRoles),
     accessibilityStates: PropTypes.arrayOf(
-      PropTypes.oneOf(AccessibilityStates),
+      PropTypes.oneOf(DeprecatedAccessibilityStates),
     ),
     accessibilityTraits: PropTypes.oneOfType([
-      PropTypes.oneOf(AccessibilityTraits),
-      PropTypes.arrayOf(PropTypes.oneOf(AccessibilityTraits)),
+      PropTypes.oneOf(DeprecatedAccessibilityTraits),
+      PropTypes.arrayOf(PropTypes.oneOf(DeprecatedAccessibilityTraits)),
     ]),
     /**
      * When `accessible` is true (which is the default) this may be called when

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <fabric/core/LocalData.h>
-#include <fabric/graphics/Geometry.h>
+#include <react/core/LocalData.h>
+#include <react/graphics/Geometry.h>
 
 namespace facebook {
 namespace react {
@@ -20,10 +20,8 @@ using SharedScrollViewLocalData = std::shared_ptr<const ScrollViewLocalData>;
 /*
  * LocalData for <ScrollView> component.
  */
-class ScrollViewLocalData:
-  public LocalData {
-
-public:
+class ScrollViewLocalData : public LocalData {
+ public:
   ScrollViewLocalData(Rect contentBoundingRect);
 
   /*

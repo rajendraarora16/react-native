@@ -14,7 +14,7 @@ void EventBeat::request() const {
   isRequested_ = true;
 }
 
-void EventBeat::beat() const {
+void EventBeat::beat(jsi::Runtime &runtime) const {
   if (!this->isRequested_) {
     return;
   }
@@ -22,7 +22,7 @@ void EventBeat::beat() const {
   isRequested_ = false;
 
   if (beatCallback_) {
-    beatCallback_();
+    beatCallback_(runtime);
   }
 }
 
@@ -32,6 +32,10 @@ void EventBeat::induce() const {
 
 void EventBeat::setBeatCallback(const BeatCallback &beatCallback) {
   beatCallback_ = beatCallback;
+}
+
+void EventBeat::setFailCallback(const FailCallback &failCallback) {
+  failCallback_ = failCallback;
 }
 
 } // namespace react

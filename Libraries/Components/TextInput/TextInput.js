@@ -12,7 +12,6 @@
 const DeprecatedColorPropType = require('DeprecatedColorPropType');
 const DeprecatedViewPropTypes = require('DeprecatedViewPropTypes');
 const DocumentSelectionState = require('DocumentSelectionState');
-const EventEmitter = require('EventEmitter');
 const NativeMethodsMixin = require('NativeMethodsMixin');
 const Platform = require('Platform');
 const PropTypes = require('prop-types');
@@ -22,19 +21,19 @@ const StyleSheet = require('StyleSheet');
 const Text = require('Text');
 const TextAncestor = require('TextAncestor');
 const TextInputState = require('TextInputState');
-const TimerMixin = require('react-timer-mixin');
 const TouchableWithoutFeedback = require('TouchableWithoutFeedback');
 const UIManager = require('UIManager');
 
 const createReactClass = require('create-react-class');
-const emptyFunction = require('fbjs/lib/emptyFunction');
-const invariant = require('fbjs/lib/invariant');
+const invariant = require('invariant');
 const requireNativeComponent = require('requireNativeComponent');
 const warning = require('fbjs/lib/warning');
 
 import type {TextStyleProp, ViewStyleProp} from 'StyleSheet';
 import type {ColorValue} from 'StyleSheetTypes';
 import type {ViewProps} from 'ViewPropTypes';
+import type {SyntheticEvent, ScrollEvent} from 'CoreEventTypes';
+import type {PressEvent} from 'CoreEventTypes';
 
 let AndroidTextInput;
 let RCTMultilineTextInputView;
@@ -56,11 +55,73 @@ const onlyMultiline = {
   children: true,
 };
 
-type Event = Object;
-type Selection = {
+export type ChangeEvent = SyntheticEvent<
+  $ReadOnly<{|
+    eventCount: number,
+    target: number,
+    text: string,
+  |}>,
+>;
+
+export type TextInputEvent = SyntheticEvent<
+  $ReadOnly<{|
+    eventCount: number,
+    previousText: string,
+    range: $ReadOnly<{|
+      start: number,
+      end: number,
+    |}>,
+    target: number,
+    text: string,
+  |}>,
+>;
+
+export type ContentSizeChangeEvent = SyntheticEvent<
+  $ReadOnly<{|
+    target: number,
+    contentSize: $ReadOnly<{|
+      width: number,
+      height: number,
+    |}>,
+  |}>,
+>;
+
+type TargetEvent = SyntheticEvent<
+  $ReadOnly<{|
+    target: number,
+  |}>,
+>;
+
+export type BlurEvent = TargetEvent;
+export type FocusEvent = TargetEvent;
+
+type Selection = $ReadOnly<{|
   start: number,
-  end?: number,
-};
+  end: number,
+|}>;
+
+export type SelectionChangeEvent = SyntheticEvent<
+  $ReadOnly<{|
+    selection: Selection,
+    target: number,
+  |}>,
+>;
+
+export type KeyPressEvent = SyntheticEvent<
+  $ReadOnly<{|
+    key: string,
+    target?: ?number,
+    eventCount?: ?number,
+  |}>,
+>;
+
+export type EditingEvent = SyntheticEvent<
+  $ReadOnly<{|
+    eventCount: number,
+    text: string,
+    target: number,
+  |}>,
+>;
 
 const DataDetectorTypes = [
   'phoneNumber',
@@ -185,17 +246,17 @@ type Props = $ReadOnly<{|
   returnKeyType?: ?ReturnKeyType,
   maxLength?: ?number,
   multiline?: ?boolean,
-  onBlur?: ?Function,
-  onFocus?: ?Function,
-  onChange?: ?Function,
-  onChangeText?: ?Function,
-  onContentSizeChange?: ?Function,
-  onTextInput?: ?Function,
-  onEndEditing?: ?Function,
-  onSelectionChange?: ?Function,
-  onSubmitEditing?: ?Function,
-  onKeyPress?: ?Function,
-  onScroll?: ?Function,
+  onBlur?: ?(e: BlurEvent) => mixed,
+  onFocus?: ?(e: FocusEvent) => mixed,
+  onChange?: ?(e: ChangeEvent) => mixed,
+  onChangeText?: ?(text: string) => mixed,
+  onContentSizeChange?: ?(e: ContentSizeChangeEvent) => mixed,
+  onTextInput?: ?(e: TextInputEvent) => mixed,
+  onEndEditing?: ?(e: EditingEvent) => mixed,
+  onSelectionChange?: ?(e: SelectionChangeEvent) => mixed,
+  onSubmitEditing?: ?(e: EditingEvent) => mixed,
+  onKeyPress?: ?(e: KeyPressEvent) => mixed,
+  onScroll?: ?(e: ScrollEvent) => mixed,
   placeholder?: ?Stringish,
   placeholderTextColor?: ?ColorValue,
   secureTextEntry?: ?boolean,
@@ -212,6 +273,8 @@ type Props = $ReadOnly<{|
   caretHidden?: ?boolean,
   contextMenuHidden?: ?boolean,
 |}>;
+
+const emptyFunctionThatReturnsTrue = () => true;
 
 /**
  * A foundational component for inputting text into the app via a
@@ -793,7 +856,7 @@ const TextInput = createReactClass({
       'oneTimeCode',
     ]),
   },
-  getDefaultProps(): Object {
+  getDefaultProps() {
     return {
       allowFontScaling: true,
       underlineColorAndroid: 'transparent',
@@ -803,7 +866,7 @@ const TextInput = createReactClass({
    * `NativeMethodsMixin` will look for this when invoking `setNativeProps`. We
    * make `this` look like an actual native component class.
    */
-  mixins: [NativeMethodsMixin, TimerMixin],
+  mixins: [NativeMethodsMixin],
 
   /**
    * Returns `true` if the input is currently focused; `false` otherwise.
@@ -819,6 +882,7 @@ const TextInput = createReactClass({
   _focusSubscription: (undefined: ?Function),
   _lastNativeText: (undefined: ?string),
   _lastNativeSelection: (undefined: ?Selection),
+  _rafId: (null: ?AnimationFrameID),
 
   componentDidMount: function() {
     this._lastNativeText = this.props.value;
@@ -826,26 +890,6 @@ const TextInput = createReactClass({
     if (tag != null) {
       // tag is null only in unit tests
       TextInputState.registerInput(tag);
-    }
-
-    if (this.context.focusEmitter) {
-      this._focusSubscription = this.context.focusEmitter.addListener(
-        'focus',
-        el => {
-          if (this === el) {
-            this.requestAnimationFrame(this.focus);
-          } else if (this.isFocused()) {
-            this.blur();
-          }
-        },
-      );
-      if (this.props.autoFocus) {
-        this.context.onFocusRequested(this);
-      }
-    } else {
-      if (this.props.autoFocus) {
-        this.requestAnimationFrame(this.focus);
-      }
     }
   },
 
@@ -858,11 +902,9 @@ const TextInput = createReactClass({
     if (tag != null) {
       TextInputState.unregisterInput(tag);
     }
-  },
-
-  contextTypes: {
-    onFocusRequested: PropTypes.func,
-    focusEmitter: PropTypes.instanceOf(EventEmitter),
+    if (this._rafId != null) {
+      cancelAnimationFrame(this._rafId);
+    }
   },
 
   /**
@@ -932,7 +974,7 @@ const TextInput = createReactClass({
           onBlur={this._onBlur}
           onChange={this._onChange}
           onSelectionChange={this._onSelectionChange}
-          onSelectionChangeShouldSetResponder={emptyFunction.thatReturnsTrue}
+          onSelectionChangeShouldSetResponder={emptyFunctionThatReturnsTrue}
           text={this._getText()}
         />
       );
@@ -969,7 +1011,7 @@ const TextInput = createReactClass({
           onContentSizeChange={this.props.onContentSizeChange}
           onSelectionChange={this._onSelectionChange}
           onTextInput={this._onTextInput}
-          onSelectionChangeShouldSetResponder={emptyFunction.thatReturnsTrue}
+          onSelectionChangeShouldSetResponder={emptyFunctionThatReturnsTrue}
           text={this._getText()}
           dataDetectorTypes={this.props.dataDetectorTypes}
           onScroll={this._onScroll}
@@ -1022,7 +1064,7 @@ const TextInput = createReactClass({
         onContentSizeChange={this.props.onContentSizeChange}
         onSelectionChange={this._onSelectionChange}
         onTextInput={this._onTextInput}
-        onSelectionChangeShouldSetResponder={emptyFunction.thatReturnsTrue}
+        onSelectionChangeShouldSetResponder={emptyFunctionThatReturnsTrue}
         text={this._getText()}
         dataDetectorTypes={this.props.dataDetectorTypes}
         onScroll={this._onScroll}
@@ -1105,7 +1147,7 @@ const TextInput = createReactClass({
     );
   },
 
-  _onFocus: function(event: Event) {
+  _onFocus: function(event: FocusEvent) {
     if (this.props.onFocus) {
       this.props.onFocus(event);
     }
@@ -1115,16 +1157,16 @@ const TextInput = createReactClass({
     }
   },
 
-  _onPress: function(event: Event) {
+  _onPress: function(event: PressEvent) {
     if (this.props.editable || this.props.editable === undefined) {
       this.focus();
     }
   },
 
-  _onChange: function(event: Event) {
+  _onChange: function(event: ChangeEvent) {
     // Make sure to fire the mostRecentEventCount first so it is already set on
     // native when the text value is set.
-    if (this._inputRef) {
+    if (this._inputRef && this._inputRef.setNativeProps) {
       this._inputRef.setNativeProps({
         mostRecentEventCount: event.nativeEvent.eventCount,
       });
@@ -1144,7 +1186,7 @@ const TextInput = createReactClass({
     this.forceUpdate();
   },
 
-  _onSelectionChange: function(event: Event) {
+  _onSelectionChange: function(event: SelectionChangeEvent) {
     this.props.onSelectionChange && this.props.onSelectionChange(event);
 
     if (!this._inputRef) {
@@ -1185,7 +1227,11 @@ const TextInput = createReactClass({
       nativeProps.selection = this.props.selection;
     }
 
-    if (Object.keys(nativeProps).length > 0 && this._inputRef) {
+    if (
+      Object.keys(nativeProps).length > 0 &&
+      this._inputRef &&
+      this._inputRef.setNativeProps
+    ) {
       this._inputRef.setNativeProps(nativeProps);
     }
 
@@ -1194,7 +1240,9 @@ const TextInput = createReactClass({
     }
   },
 
-  _onBlur: function(event: Event) {
+  _onBlur: function(event: BlurEvent) {
+    // This is a hack to fix https://fburl.com/toehyir8
+    // @todo(rsnara) Figure out why this is necessary.
     this.blur();
     if (this.props.onBlur) {
       this.props.onBlur(event);
@@ -1205,11 +1253,11 @@ const TextInput = createReactClass({
     }
   },
 
-  _onTextInput: function(event: Event) {
+  _onTextInput: function(event: TextInputEvent) {
     this.props.onTextInput && this.props.onTextInput(event);
   },
 
-  _onScroll: function(event: Event) {
+  _onScroll: function(event: ScrollEvent) {
     this.props.onScroll && this.props.onScroll(event);
   },
 });

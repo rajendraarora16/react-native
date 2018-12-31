@@ -7,9 +7,9 @@
 
 #include "ParagraphAttributes.h"
 
-#include <fabric/attributedstring/conversions.h>
-#include <fabric/graphics/conversions.h>
-#include <fabric/debug/debugStringConvertibleUtils.h>
+#include <react/attributedstring/conversions.h>
+#include <react/debug/debugStringConvertibleUtils.h>
+#include <react/graphics/conversions.h>
 
 namespace facebook {
 namespace react {
@@ -19,12 +19,11 @@ namespace react {
 #if RN_DEBUG_STRING_CONVERTIBLE
 SharedDebugStringConvertibleList ParagraphAttributes::getDebugProps() const {
   return {
-    debugStringConvertibleItem("maximumNumberOfLines", maximumNumberOfLines),
-    debugStringConvertibleItem("ellipsizeMode", ellipsizeMode),
-    debugStringConvertibleItem("adjustsFontSizeToFit", adjustsFontSizeToFit),
-    debugStringConvertibleItem("minimumFontSize", minimumFontSize),
-    debugStringConvertibleItem("maximumFontSize", maximumFontSize)
-  };
+      debugStringConvertibleItem("maximumNumberOfLines", maximumNumberOfLines),
+      debugStringConvertibleItem("ellipsizeMode", ellipsizeMode),
+      debugStringConvertibleItem("adjustsFontSizeToFit", adjustsFontSizeToFit),
+      debugStringConvertibleItem("minimumFontSize", minimumFontSize),
+      debugStringConvertibleItem("maximumFontSize", maximumFontSize)};
 }
 #endif
 
